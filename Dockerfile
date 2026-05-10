@@ -1,41 +1,37 @@
-# Multi-stage build for Situation Monitor SvelteKit application
+# Multi-stage build for Situation Monitor SvelteKit application (adapter-node)
 
 # Stage 1: Build
 FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
 COPY package.json package-lock.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy application source
 COPY . .
 
-# Build argument for Finnhub API key (optional at build time)
 ARG VITE_FINNHUB_API_KEY
+ARG VITE_FRED_API_KEY
 ENV VITE_FINNHUB_API_KEY=${VITE_FINNHUB_API_KEY}
+ENV VITE_FRED_API_KEY=${VITE_FRED_API_KEY}
 
-# Build the application
 RUN npm run build
 
 # Stage 2: Production
-FROM nginx:alpine
+FROM node:20-alpine
 
-# Copy custom nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+WORKDIR /app
 
-# Copy built static files from builder stage
-COPY --from=builder /app/build /usr/share/nginx/html
+COPY --from=builder /app/build ./build
+COPY --from=builder /app/package.json ./package.json
+COPY --from=builder /app/node_modules ./node_modules
 
-# Expose port 80 (mapped to 3003 on host)
-EXPOSE 80
+ENV NODE_ENV=production
+ENV PORT=3000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --quiet --tries=1 --spider http://localhost/ || exit 1
+EXPOSE 3000
 
-# Start nginx
-CMD ["nginx", "-g", "daemon off;"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
+  CMD wget --quiet --tries=1 --spider http://localhost:3000/ || exit 1
+
+CMD ["node", "build/index.js"]

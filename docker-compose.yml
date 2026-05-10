@@ -7,25 +7,23 @@ services:
       dockerfile: Dockerfile
       args:
         VITE_FINNHUB_API_KEY: ${VITE_FINNHUB_API_KEY:-}
+        VITE_FRED_API_KEY: ${VITE_FRED_API_KEY:-}
     container_name: situation-monitor
     ports:
-      - "3003:80"
+      - "3003:3000"
     restart: unless-stopped
     environment:
       - NODE_ENV=production
-    networks:
-      - situation-monitor-network
+      - VITE_FINNHUB_API_KEY=${VITE_FINNHUB_API_KEY:-}
+      - VITE_FRED_API_KEY=${VITE_FRED_API_KEY:-}
     healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
-      timeout: 3s
+      timeout: 5s
       retries: 3
-      start_period: 5s
+      start_period: 15s
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     labels:
       - "com.docker.compose.project=situation-monitor"
       - "description=Real-time global intelligence dashboard"
-
-networks:
-  situation-monitor-network:
-    driver: bridge
-    name: situation-monitor-network

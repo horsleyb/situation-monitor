@@ -45,7 +45,7 @@ const CATEGORY_FEEDS: Record<string, { url: string; source: string }[]> = {
 	]
 };
 
-export const ALL_CATEGORIES = Object.keys(CATEGORY_FEEDS);
+const ALL_CATEGORIES = Object.keys(CATEGORY_FEEDS);
 
 interface Article { title: string; url: string; source: string; date: string }
 
