@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  situation-monitor:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_FINNHUB_API_KEY: ${VITE_FINNHUB_API_KEY:-}
+    container_name: situation-monitor
+    ports:
+      - "3003:80"
+    restart: unless-stopped
+    environment:
+      - NODE_ENV=production
+    networks:
+      - situation-monitor-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    labels:
+      - "com.docker.compose.project=situation-monitor"
+      - "description=Real-time global intelligence dashboard"
+
+networks:
+  situation-monitor-network:
+    driver: bridge
+    name: situation-monitor-network
