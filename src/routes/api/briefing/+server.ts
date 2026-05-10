@@ -1,6 +1,6 @@
 /**
  * GET /api/briefing — comprehensive situational snapshot for Jarvis
- * Aggregates top news + market data + economic indicators.
+ * Aggregates top news (via RSS) + market data + economic indicators.
  * Cached 5 minutes in memory.
  */
 import { json } from '@sveltejs/kit';
@@ -12,34 +12,84 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 interface CacheEntry { data: unknown; expires: number }
 const cache = new Map<string, CacheEntry>();
-
 function getCached(key: string): unknown | null {
 	const e = cache.get(key);
 	return e && Date.now() < e.expires ? e.data : null;
 }
-function setCached(key: string, data: unknown): void {
-	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
+function setCached(key: string, data: unknown, ttl = CACHE_TTL): void {
+	cache.set(key, { data, expires: Date.now() + ttl });
 }
 
-interface NewsArticle { title: string; url: string; source: string; date: string }
-async function gdeltNews(query: string, max = 5): Promise<NewsArticle[]> {
+// ── RSS news ──────────────────────────────────────────────────────────────────
+
+interface Article { title: string; url: string; source: string; date: string }
+
+const CATEGORY_FEEDS: Record<string, { url: string; source: string }[]> = {
+	politics: [
+		{ url: 'https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml', source: 'NYT' },
+		{ url: 'https://feeds.bbci.co.uk/news/politics/rss.xml', source: 'BBC' }
+	],
+	finance: [
+		{ url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC Business' },
+		{ url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', source: 'NYT Business' }
+	],
+	ai: [
+		{ url: 'https://arstechnica.com/ai/feed/', source: 'Ars Technica' },
+		{ url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'TechCrunch' }
+	],
+	intel: [
+		{ url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World' },
+		{ url: 'https://www.theguardian.com/world/rss', source: 'Guardian' }
+	]
+};
+
+function parseRss(xml: string, source: string): Article[] {
+	const items: Article[] = [];
+	const itemRe = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+	const titleRe = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i;
+	const linkRe = /<(?:link|guid[^>]*isPermaLink[^>]*>)(?:<!\[CDATA\[)?(https?:\/\/[^\s<]+)(?:\]\]>)?/i;
+	const dateRe = /<pubDate>([\s\S]*?)<\/pubDate>/i;
+
+	let m;
+	while ((m = itemRe.exec(xml)) !== null) {
+		const item = m[1];
+		const title = titleRe.exec(item)?.[1]?.trim().replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') ?? '';
+		const url = linkRe.exec(item)?.[1]?.trim() ?? '';
+		const date = dateRe.exec(item)?.[1]?.trim() ?? '';
+		if (title && url) items.push({ title, url, source, date });
+	}
+	return items;
+}
+
+async function fetchRssFeed(url: string, source: string): Promise<Article[]> {
 	try {
-		const q = encodeURIComponent(`${query} sourcelang:english`);
-		const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&timespan=24h&mode=artlist&maxrecords=${max}&format=json&sort=date`;
-		const res = await fetch(url, { signal: AbortSignal.timeout(6000) });
+		const res = await fetch(url, {
+			signal: AbortSignal.timeout(7000),
+			headers: { 'User-Agent': 'Jarvis/2.0 RSS Reader' }
+		});
 		if (!res.ok) return [];
-		const d = await res.json();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		return (d.articles ?? []).map((a: any) => ({
-			title: a.title ?? '',
-			url: a.url ?? '',
-			source: a.domain ?? '',
-			date: a.seendate ?? ''
-		}));
+		const xml = await res.text();
+		return parseRss(xml, source);
 	} catch {
 		return [];
 	}
 }
+
+async function fetchCategoryNews(category: string, max = 4): Promise<Article[]> {
+	const feeds = CATEGORY_FEEDS[category] ?? [];
+	if (!feeds.length) return [];
+
+	const cacheKey = `rss:${category}`;
+	const cached = getCached(cacheKey);
+	if (cached) return cached as Article[];
+
+	const results = await Promise.all(feeds.map((f) => fetchRssFeed(f.url, f.source)));
+	const merged = results.flat().slice(0, max);
+	setCached(cacheKey, merged);
+	return merged;
+}
+
+// ── Market data ───────────────────────────────────────────────────────────────
 
 interface Quote { price: number; change: number; changePercent: number }
 async function finnhubQuote(symbol: string): Promise<Quote | null> {
@@ -51,16 +101,16 @@ async function finnhubQuote(symbol: string): Promise<Quote | null> {
 		const d = await res.json();
 		if (d.c === 0 && d.pc === 0) return null;
 		return { price: d.c, change: d.d, changePercent: d.dp };
-	} catch {
-		return null;
-	}
+	} catch { return null; }
 }
 
 interface CryptoItem { symbol: string; name: string; price: number; change24h: number }
 async function coinGeckoCrypto(): Promise<CryptoItem[]> {
 	try {
-		const url = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true';
-		const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+		const res = await fetch(
+			'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum,solana&vs_currencies=usd&include_24hr_change=true',
+			{ signal: AbortSignal.timeout(6000) }
+		);
 		if (!res.ok) return [];
 		const d = await res.json();
 		return [
@@ -68,9 +118,7 @@ async function coinGeckoCrypto(): Promise<CryptoItem[]> {
 			{ symbol: 'ETH', name: 'Ethereum', price: d.ethereum?.usd ?? 0, change24h: d.ethereum?.usd_24h_change ?? 0 },
 			{ symbol: 'SOL', name: 'Solana', price: d.solana?.usd ?? 0, change24h: d.solana?.usd_24h_change ?? 0 }
 		];
-	} catch {
-		return [];
-	}
+	} catch { return []; }
 }
 
 interface FredValue { value: number | null; date: string | null }
@@ -85,10 +133,10 @@ async function fredSeries(seriesId: string): Promise<FredValue> {
 		const raw = obs?.value;
 		const val = raw === '.' || raw == null ? null : parseFloat(raw);
 		return { value: isNaN(val as number) ? null : val, date: obs?.date ?? null };
-	} catch {
-		return { value: null, date: null };
-	}
+	} catch { return { value: null, date: null }; }
 }
+
+// ── Handler ───────────────────────────────────────────────────────────────────
 
 export const GET: RequestHandler = async () => {
 	const cached = getCached('briefing');
@@ -96,10 +144,10 @@ export const GET: RequestHandler = async () => {
 
 	const [politics, finance, ai, intel, spy, dia, qqq, crypto, fedFunds, treasury10y] =
 		await Promise.allSettled([
-			gdeltNews('(politics OR government OR election OR congress)', 4),
-			gdeltNews('(finance OR "stock market" OR economy OR banking)', 4),
-			gdeltNews('("artificial intelligence" OR "machine learning" OR AI)', 4),
-			gdeltNews('(intelligence OR security OR military OR defense)', 3),
+			fetchCategoryNews('politics', 4),
+			fetchCategoryNews('finance', 4),
+			fetchCategoryNews('ai', 4),
+			fetchCategoryNews('intel', 3),
 			finnhubQuote('SPY'),
 			finnhubQuote('DIA'),
 			finnhubQuote('QQQ'),

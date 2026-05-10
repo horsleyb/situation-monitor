@@ -1,5 +1,5 @@
 /**
- * GET /api/news?category=<category> — news articles from GDELT
+ * GET /api/news?category=<category> — news articles via RSS feeds
  * category: politics | tech | finance | gov | ai | intel  (omit for all)
  * Cached 5 minutes per category.
  */
@@ -10,7 +10,6 @@ const CACHE_TTL = 5 * 60 * 1000;
 
 interface CacheEntry { data: unknown; expires: number }
 const cache = new Map<string, CacheEntry>();
-
 function getCached(key: string): unknown | null {
 	const e = cache.get(key);
 	return e && Date.now() < e.expires ? e.data : null;
@@ -19,50 +18,83 @@ function setCached(key: string, data: unknown): void {
 	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-const CATEGORY_QUERIES: Record<string, string> = {
-	politics: '(politics OR government OR election OR congress)',
-	tech: '(technology OR software OR startup OR "silicon valley")',
-	finance: '(finance OR "stock market" OR economy OR banking)',
-	gov: '("federal government" OR "white house" OR congress OR regulation)',
-	ai: '("artificial intelligence" OR "machine learning" OR AI OR ChatGPT)',
-	intel: '(intelligence OR security OR military OR defense)'
+const CATEGORY_FEEDS: Record<string, { url: string; source: string }[]> = {
+	politics: [
+		{ url: 'https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml', source: 'NYT' },
+		{ url: 'https://feeds.bbci.co.uk/news/politics/rss.xml', source: 'BBC Politics' }
+	],
+	tech: [
+		{ url: 'https://techcrunch.com/feed/', source: 'TechCrunch' },
+		{ url: 'https://feeds.bbci.co.uk/news/technology/rss.xml', source: 'BBC Tech' }
+	],
+	finance: [
+		{ url: 'https://feeds.bbci.co.uk/news/business/rss.xml', source: 'BBC Business' },
+		{ url: 'https://rss.nytimes.com/services/xml/rss/nyt/Business.xml', source: 'NYT Business' }
+	],
+	gov: [
+		{ url: 'https://rss.nytimes.com/services/xml/rss/nyt/Politics.xml', source: 'NYT Politics' },
+		{ url: 'https://www.theguardian.com/us-news/rss', source: 'Guardian US' }
+	],
+	ai: [
+		{ url: 'https://arstechnica.com/ai/feed/', source: 'Ars Technica AI' },
+		{ url: 'https://techcrunch.com/category/artificial-intelligence/feed/', source: 'TechCrunch AI' }
+	],
+	intel: [
+		{ url: 'https://feeds.bbci.co.uk/news/world/rss.xml', source: 'BBC World' },
+		{ url: 'https://www.theguardian.com/world/rss', source: 'Guardian World' }
+	]
 };
 
-const ALL_CATEGORIES = Object.keys(CATEGORY_QUERIES);
+export const ALL_CATEGORIES = Object.keys(CATEGORY_FEEDS);
 
 interface Article { title: string; url: string; source: string; date: string }
 
-async function fetchCategory(category: string): Promise<Article[]> {
-	const query = CATEGORY_QUERIES[category];
-	if (!query) return [];
+function parseRss(xml: string, source: string): Article[] {
+	const items: Article[] = [];
+	const itemRe = /<item[^>]*>([\s\S]*?)<\/item>/gi;
+	const titleRe = /<title>(?:<!\[CDATA\[)?([\s\S]*?)(?:\]\]>)?<\/title>/i;
+	const linkRe = /<(?:link|guid[^>]*isPermaLink[^>]*>)(?:<!\[CDATA\[)?(https?:\/\/[^\s<]+)(?:\]\]>)?/i;
+	const dateRe = /<pubDate>([\s\S]*?)<\/pubDate>/i;
 
-	const cacheKey = `news:${category}`;
-	const cached = getCached(cacheKey);
-	if (cached) return cached as Article[];
+	let m;
+	while ((m = itemRe.exec(xml)) !== null) {
+		const item = m[1];
+		const title = titleRe.exec(item)?.[1]?.trim()
+			.replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>') ?? '';
+		const url = linkRe.exec(item)?.[1]?.trim() ?? '';
+		const date = dateRe.exec(item)?.[1]?.trim() ?? '';
+		if (title && url) items.push({ title, url, source, date });
+	}
+	return items;
+}
 
+async function fetchFeed(url: string, source: string): Promise<Article[]> {
 	try {
-		const q = encodeURIComponent(`${query} sourcelang:english`);
-		const url = `https://api.gdeltproject.org/api/v2/doc/doc?query=${q}&timespan=24h&mode=artlist&maxrecords=10&format=json&sort=date`;
-		const res = await fetch(url, { signal: AbortSignal.timeout(7000) });
+		const res = await fetch(url, {
+			signal: AbortSignal.timeout(7000),
+			headers: { 'User-Agent': 'Jarvis/2.0 RSS Reader' }
+		});
 		if (!res.ok) return [];
-		const d = await res.json();
-		// eslint-disable-next-line @typescript-eslint/no-explicit-any
-		const articles: Article[] = (d.articles ?? []).map((a: any) => ({
-			title: a.title ?? '',
-			url: a.url ?? '',
-			source: a.domain ?? '',
-			date: a.seendate ?? ''
-		}));
-		setCached(cacheKey, articles);
-		return articles;
+		return parseRss(await res.text(), source);
 	} catch {
 		return [];
 	}
 }
 
+async function fetchCategory(category: string): Promise<Article[]> {
+	const cacheKey = `rss:${category}`;
+	const cached = getCached(cacheKey);
+	if (cached) return cached as Article[];
+
+	const feeds = CATEGORY_FEEDS[category] ?? [];
+	const results = await Promise.all(feeds.map((f) => fetchFeed(f.url, f.source)));
+	const articles = results.flat().slice(0, 10);
+	setCached(cacheKey, articles);
+	return articles;
+}
+
 export const GET: RequestHandler = async ({ url }) => {
 	const category = url.searchParams.get('category')?.toLowerCase();
-
 	const headers = { 'Access-Control-Allow-Origin': '*' };
 
 	if (category) {
@@ -70,15 +102,18 @@ export const GET: RequestHandler = async ({ url }) => {
 			throw error(400, `Unknown category. Valid: ${ALL_CATEGORIES.join(', ')}`);
 		}
 		const articles = await fetchCategory(category);
-		return json({ category, articles, count: articles.length, timestamp: new Date().toISOString() }, { headers });
+		return json(
+			{ category, articles, count: articles.length, timestamp: new Date().toISOString() },
+			{ headers }
+		);
 	}
 
-	// Fetch all categories with 500ms stagger to avoid GDELT rate limits
 	const result: Record<string, Article[]> = {};
-	for (let i = 0; i < ALL_CATEGORIES.length; i++) {
-		if (i > 0) await new Promise((r) => setTimeout(r, 500));
-		result[ALL_CATEGORIES[i]] = await fetchCategory(ALL_CATEGORIES[i]);
-	}
+	await Promise.all(
+		ALL_CATEGORIES.map(async (cat) => {
+			result[cat] = await fetchCategory(cat);
+		})
+	);
 
 	return json({ categories: result, timestamp: new Date().toISOString() }, { headers });
 };
