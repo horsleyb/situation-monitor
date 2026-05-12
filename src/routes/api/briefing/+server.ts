@@ -138,9 +138,17 @@ async function fredSeries(seriesId: string): Promise<FredValue> {
 
 // ── Handler ───────────────────────────────────────────────────────────────────
 
+const BASE_HEADERS = {
+	'Content-Type': 'application/json',
+	'X-Content-Type-Options': 'nosniff',
+	'Access-Control-Allow-Origin': '*',
+	// Briefing is cached 5 min server-side; tell clients to revalidate after 1 min
+	'Cache-Control': 'public, max-age=60, stale-while-revalidate=60'
+};
+
 export const GET: RequestHandler = async () => {
 	const cached = getCached('briefing');
-	if (cached) return json(cached, { headers: { 'Access-Control-Allow-Origin': '*' } });
+	if (cached) return json(cached, { headers: BASE_HEADERS });
 
 	const [politics, finance, ai, intel, spy, dia, qqq, crypto, fedFunds, treasury10y] =
 		await Promise.allSettled([
@@ -182,7 +190,7 @@ export const GET: RequestHandler = async () => {
 	};
 
 	setCached('briefing', briefing);
-	return json(briefing, { headers: { 'Access-Control-Allow-Origin': '*' } });
+	return json(briefing, { headers: BASE_HEADERS });
 };
 
 export const OPTIONS: RequestHandler = async () =>
@@ -190,6 +198,7 @@ export const OPTIONS: RequestHandler = async () =>
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Access-Control-Allow-Methods': 'GET, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'X-Content-Type-Options': 'nosniff'
 		}
 	});
