@@ -42,8 +42,12 @@
 			<span class="btn-icon">🔑</span>
 			<span class="btn-label">Keywords</span>
 		</button>
-		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
+		<a href="/config" class="header-btn" title="Configuration">
 			<span class="btn-icon">⚙</span>
+			<span class="btn-label">Config</span>
+		</a>
+		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
+			<span class="btn-icon">☰</span>
 			<span class="btn-label">Settings</span>
 		</button>
 	</div>
@@ -126,6 +130,7 @@
 		cursor: pointer;
 		transition: all 0.15s ease;
 		font-size: 0.65rem;
+		text-decoration: none;
 	}
 
 	.header-btn:hover {
