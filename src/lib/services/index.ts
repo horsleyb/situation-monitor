@@ -48,3 +48,13 @@ export {
 	type ServiceClientOptions,
 	type HealthStatus
 } from './client';
+
+// DGX Spark LLM service
+export {
+	analyzeNewsWithLLM,
+	checkDgxConnectivity,
+	DEFAULT_DGX_CONFIG,
+	type DgxConfig,
+	type LlmCluster,
+	type LlmAnalysis
+} from './dgxService';

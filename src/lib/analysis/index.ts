@@ -2,6 +2,9 @@
  * Analysis module barrel file
  */
 
+// DGX LLM merge utility
+export { mergeLlmAnalysis } from './dgxMerge';
+
 // Correlation engine
 export {
 	analyzeCorrelations,

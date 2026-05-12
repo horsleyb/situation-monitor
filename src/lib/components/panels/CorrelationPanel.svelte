@@ -1,7 +1,11 @@
 <script lang="ts">
 	import { Panel, Badge } from '$lib/components/common';
 	import { analyzeCorrelations } from '$lib/analysis/correlation';
+	import { mergeLlmAnalysis } from '$lib/analysis/dgxMerge';
+	import { dgxEnabled } from '$lib/stores/dgx';
 	import type { NewsItem } from '$lib/types';
+	import type { LlmAnalysis } from '$lib/services/dgxService';
+	import type { CorrelationResults } from '$lib/analysis/correlation';
 
 	interface Props {
 		news?: NewsItem[];
@@ -11,7 +15,64 @@
 
 	let { news = [], loading = false, error = null }: Props = $props();
 
-	const analysis = $derived(analyzeCorrelations(news));
+	// LLM state
+	let llmAnalysis = $state<LlmAnalysis | null>(null);
+	let llmLoading = $state(false);
+	let llmError = $state<string | null>(null);
+
+	// Regex-only analysis (synchronous, always runs)
+	const regexAnalysis = $derived(analyzeCorrelations(news));
+
+	// Combined analysis — merges LLM clusters on top of regex results
+	const analysis = $derived((): CorrelationResults | null => {
+		if (!regexAnalysis) return null;
+		// Clone so we don't mutate the regex result directly
+		const merged: CorrelationResults = {
+			emergingPatterns: [...regexAnalysis.emergingPatterns],
+			momentumSignals: [...regexAnalysis.momentumSignals],
+			crossSourceCorrelations: [...regexAnalysis.crossSourceCorrelations],
+			predictiveSignals: [...regexAnalysis.predictiveSignals]
+		};
+		mergeLlmAnalysis(merged, llmAnalysis, news);
+		return merged;
+	});
+
+	// Trigger LLM analysis when news changes and DGX is enabled
+	$effect(() => {
+		if (!$dgxEnabled || news.length === 0) {
+			llmAnalysis = null;
+			llmError = null;
+			return;
+		}
+
+		const headlines = news.slice(0, 60).map((n) => n.title);
+		llmLoading = true;
+		llmError = null;
+
+		fetch('/api/dgx', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ headlines })
+		})
+			.then(async (res) => {
+				if (!res.ok) {
+					const msg = await res.text().catch(() => String(res.status));
+					throw new Error(msg);
+				}
+				return res.json() as Promise<LlmAnalysis>;
+			})
+			.then((result) => {
+				llmAnalysis = result;
+			})
+			.catch((err: unknown) => {
+				console.warn('[DGX] Analysis failed:', err instanceof Error ? err.message : String(err));
+				llmError = 'DGX unavailable — using pattern analysis only';
+				llmAnalysis = null;
+			})
+			.finally(() => {
+				llmLoading = false;
+			});
+	});
 
 	function getLevelVariant(level: string): 'default' | 'warning' | 'danger' | 'success' | 'info' {
 		switch (level) {
@@ -49,12 +110,28 @@
 <Panel id="correlation" title="Pattern Analysis" {loading} {error}>
 	{#if news.length === 0 && !loading && !error}
 		<div class="empty-state">Insufficient data for analysis</div>
-	{:else if analysis}
+	{:else if analysis()}
+		{@const a = analysis()!}
 		<div class="correlation-content">
-			{#if analysis.emergingPatterns.length > 0}
+			{#if $dgxEnabled}
+				<div class="llm-status" class:llm-loading={llmLoading} class:llm-error={!!llmError && !llmLoading}>
+					{#if llmLoading}
+						<span class="llm-badge">DGX</span> Analyzing with Qwen2.5-72B…
+					{:else if llmError}
+						<span class="llm-badge llm-badge--warn">DGX</span> {llmError}
+					{:else if llmAnalysis}
+						<span class="llm-badge llm-badge--ok">DGX</span>
+						LLM enhanced · {llmAnalysis.clusters.length} cluster{llmAnalysis.clusters.length !== 1 ? 's' : ''}
+					{:else}
+						<span class="llm-badge">DGX</span> Waiting for data…
+					{/if}
+				</div>
+			{/if}
+
+			{#if a.emergingPatterns.length > 0}
 				<div class="section">
 					<div class="section-title">Emerging Patterns</div>
-					{#each analysis.emergingPatterns.slice(0, 3) as pattern}
+					{#each a.emergingPatterns.slice(0, 3) as pattern}
 						<div class="pattern-item">
 							<div class="pattern-header">
 								<span class="pattern-topic">{pattern.name}</span>
@@ -71,10 +148,10 @@
 				</div>
 			{/if}
 
-			{#if analysis.momentumSignals.length > 0}
+			{#if a.momentumSignals.length > 0}
 				<div class="section">
 					<div class="section-title">Momentum Signals</div>
-					{#each analysis.momentumSignals.slice(0, 3) as signal}
+					{#each a.momentumSignals.slice(0, 3) as signal}
 						<div class="signal-item {getMomentumClass(signal.momentum)}">
 							<span class="signal-topic">{signal.name}</span>
 							<span
@@ -90,10 +167,10 @@
 				</div>
 			{/if}
 
-			{#if analysis.crossSourceCorrelations.length > 0}
+			{#if a.crossSourceCorrelations.length > 0}
 				<div class="section">
 					<div class="section-title">Cross-Source Links</div>
-					{#each analysis.crossSourceCorrelations.slice(0, 3) as corr}
+					{#each a.crossSourceCorrelations.slice(0, 3) as corr}
 						<div class="correlation-item">
 							<div class="correlation-sources">
 								{corr.sources.slice(0, 2).join(' ↔ ')}
@@ -104,10 +181,10 @@
 				</div>
 			{/if}
 
-			{#if analysis.predictiveSignals.length > 0}
+			{#if a.predictiveSignals.length > 0}
 				<div class="section">
 					<div class="section-title">Predictive Signals</div>
-					{#each analysis.predictiveSignals.slice(0, 2) as signal}
+					{#each a.predictiveSignals.slice(0, 2) as signal}
 						<div class="predictive-item">
 							<div class="predictive-pattern">{signal.prediction}</div>
 							<div class="predictive-confidence">
@@ -118,7 +195,7 @@
 				</div>
 			{/if}
 
-			{#if analysis.emergingPatterns.length === 0 && analysis.momentumSignals.length === 0}
+			{#if a.emergingPatterns.length === 0 && a.momentumSignals.length === 0}
 				<div class="empty-state">No significant patterns detected</div>
 			{/if}
 		</div>
@@ -132,6 +209,48 @@
 		display: flex;
 		flex-direction: column;
 		gap: 0.75rem;
+	}
+
+	/* DGX status bar */
+	.llm-status {
+		display: flex;
+		align-items: center;
+		gap: 0.35rem;
+		font-size: 0.55rem;
+		color: var(--text-muted);
+		padding: 0.25rem 0.4rem;
+		background: rgba(255, 255, 255, 0.02);
+		border-radius: 4px;
+		border: 1px solid var(--border);
+	}
+
+	.llm-status.llm-loading {
+		border-color: rgba(0, 255, 136, 0.2);
+	}
+
+	.llm-status.llm-error {
+		border-color: rgba(255, 165, 0, 0.2);
+		color: var(--warning, orange);
+	}
+
+	.llm-badge {
+		font-size: 0.5rem;
+		font-weight: 700;
+		letter-spacing: 0.05em;
+		padding: 0.1rem 0.3rem;
+		border-radius: 3px;
+		background: rgba(255, 255, 255, 0.08);
+		color: var(--text-secondary);
+	}
+
+	.llm-badge--ok {
+		background: rgba(0, 255, 136, 0.15);
+		color: var(--accent);
+	}
+
+	.llm-badge--warn {
+		background: rgba(255, 165, 0, 0.15);
+		color: var(--warning, orange);
 	}
 
 	.section {

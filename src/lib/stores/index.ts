@@ -77,3 +77,6 @@ export {
 	type FedIndicatorsState,
 	type FedNewsState
 } from './fed';
+
+// DGX LLM settings
+export { dgxEnabled } from './dgx';

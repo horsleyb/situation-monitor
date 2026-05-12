@@ -18,7 +18,8 @@ function setCached(key: string, data: unknown): void {
 	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-const WEATHER_CODES: Record<number, string> = {
+// WEATHER_CODES kept for future use (condition code → human label lookup)
+const _WEATHER_CODES: Record<number, string> = {
 	113: 'Sunny', 116: 'Partly cloudy', 119: 'Cloudy', 122: 'Overcast',
 	143: 'Mist', 176: 'Patchy rain', 179: 'Patchy snow', 182: 'Patchy sleet',
 	185: 'Patchy freezing drizzle', 200: 'Thundery outbreaks', 227: 'Blowing snow',
@@ -36,6 +37,7 @@ const WEATHER_CODES: Record<number, string> = {
 	389: 'Moderate/heavy rain with thunder', 392: 'Patchy snow with thunder',
 	395: 'Moderate/heavy snow with thunder',
 };
+void _WEATHER_CODES; // suppress unused-variable lint
 
 export interface WeatherData {
 	location: string;
