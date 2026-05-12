@@ -33,7 +33,8 @@ export type PanelId =
 	| 'correlation'
 	| 'narrative'
 	| 'fed'
-	| 'weather';
+	| 'weather'
+	| 'feed-health';
 
 export const PANELS: Record<PanelId, PanelConfig> = {
 	map: { name: 'Global Map', priority: 1 },
@@ -61,7 +62,8 @@ export const PANELS: Record<PanelId, PanelConfig> = {
 	correlation: { name: 'Correlation Engine', priority: 1 },
 	narrative: { name: 'Narrative Tracker', priority: 1 },
 	fed: { name: 'Federal Reserve', priority: 1 },
-	weather: { name: 'Weather', priority: 2 }
+	weather: { name: 'Weather', priority: 2 },
+	'feed-health': { name: 'Feed Health', priority: 3 }
 };
 
 export const NON_DRAGGABLE_PANELS: PanelId[] = ['map'];

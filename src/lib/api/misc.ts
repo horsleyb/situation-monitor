@@ -142,6 +142,34 @@ export async function fetchWeather(location = 'Chicago'): Promise<WeatherData> {
 	return res.json() as Promise<WeatherData>;
 }
 
+export interface FeedHealthResult {
+	url: string;
+	name: string;
+	category: string;
+	status: 'ok' | 'error';
+	latencyMs: number | null;
+	error: string | null;
+	checkedAt: string;
+}
+
+export interface FeedHealthSummary {
+	total: number;
+	ok: number;
+	error: number;
+}
+
+export interface FeedHealthData {
+	feeds: FeedHealthResult[];
+	summary: FeedHealthSummary;
+	checkedAt: string;
+}
+
+export async function fetchFeedHealth(): Promise<FeedHealthData> {
+	const res = await fetch('/api/feed-health');
+	if (!res.ok) throw new Error(`Feed health check failed: HTTP ${res.status}`);
+	return res.json() as Promise<FeedHealthData>;
+}
+
 /**
  * Fetch layoffs data
  * Note: Would use layoffs.fyi API or similar - returning sample data
