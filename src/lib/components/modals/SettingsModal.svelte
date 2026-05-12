@@ -1,6 +1,7 @@
 <script lang="ts">
 	import Modal from './Modal.svelte';
 	import { settings } from '$lib/stores';
+	import { dgxEnabled } from '$lib/stores/dgx';
 	import { PANELS, type PanelId } from '$lib/config';
 
 	interface Props {
@@ -41,6 +42,31 @@
 					</label>
 				{/each}
 			</div>
+		</section>
+
+		<section class="settings-section">
+			<h3 class="section-title">AI Enhancement (DGX Spark)</h3>
+			<p class="section-desc">
+				Use local Qwen2.5-72B on DGX Spark to cluster headlines and detect correlations the
+				pattern engine might miss. Requires the DGX to be reachable on the local network.
+			</p>
+			<label class="dgx-toggle" class:dgx-enabled={$dgxEnabled}>
+				<input
+					type="checkbox"
+					checked={$dgxEnabled}
+					onchange={() => dgxEnabled.toggle()}
+				/>
+				<span class="dgx-label">
+					{$dgxEnabled ? 'DGX Analysis ON' : 'DGX Analysis OFF'}
+				</span>
+				<span class="dgx-model">qwen2.5-72b @ 192.168.68.118:8002</span>
+			</label>
+			{#if $dgxEnabled}
+				<p class="dgx-hint">
+					Analysis runs automatically when the Pattern Analysis panel loads news.
+					Falls back to regex-only if DGX is unreachable.
+				</p>
+			{/if}
 		</section>
 
 		<section class="settings-section">
@@ -162,5 +188,48 @@
 
 	.reset-btn:hover {
 		background: rgba(255, 68, 68, 0.2);
+	}
+
+	/* DGX toggle */
+	.dgx-toggle {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		padding: 0.5rem 0.75rem;
+		background: rgba(255, 255, 255, 0.02);
+		border: 1px solid var(--border);
+		border-radius: 4px;
+		cursor: pointer;
+		transition: all 0.15s ease;
+	}
+
+	.dgx-toggle.dgx-enabled {
+		border-color: var(--accent);
+		background: rgba(var(--accent-rgb), 0.1);
+	}
+
+	.dgx-toggle input {
+		accent-color: var(--accent);
+	}
+
+	.dgx-label {
+		flex: 1;
+		font-size: 0.7rem;
+		color: var(--text-primary);
+		font-weight: 500;
+	}
+
+	.dgx-model {
+		font-size: 0.55rem;
+		color: var(--text-muted);
+		font-family: monospace;
+	}
+
+	.dgx-hint {
+		font-size: 0.6rem;
+		color: var(--text-muted);
+		margin: 0;
+		padding-left: 0.25rem;
+		border-left: 2px solid rgba(0, 255, 136, 0.3);
 	}
 </style>

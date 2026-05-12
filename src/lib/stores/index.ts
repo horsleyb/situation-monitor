@@ -103,3 +103,6 @@ export {
 	type FeedHealth,
 	type FeedHealthState
 } from './feedHealth';
+
+// DGX LLM settings
+export { dgxEnabled } from './dgx';
