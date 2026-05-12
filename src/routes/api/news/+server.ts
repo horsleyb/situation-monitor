@@ -93,9 +93,17 @@ async function fetchCategory(category: string): Promise<Article[]> {
 	return articles;
 }
 
+const BASE_HEADERS = {
+	'Content-Type': 'application/json',
+	'X-Content-Type-Options': 'nosniff',
+	'Access-Control-Allow-Origin': '*',
+	// News refreshes every 5 minutes server-side; tell clients to revalidate after 1 min
+	'Cache-Control': 'public, max-age=60, stale-while-revalidate=60'
+};
+
 export const GET: RequestHandler = async ({ url }) => {
-	const category = url.searchParams.get('category')?.toLowerCase();
-	const headers = { 'Access-Control-Allow-Origin': '*' };
+	const category = url.searchParams.get('category')?.toLowerCase().trim();
+	const headers = BASE_HEADERS;
 
 	if (category) {
 		if (!ALL_CATEGORIES.includes(category)) {
@@ -123,6 +131,7 @@ export const OPTIONS: RequestHandler = async () =>
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Access-Control-Allow-Methods': 'GET, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'X-Content-Type-Options': 'nosniff'
 		}
 	});

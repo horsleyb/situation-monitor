@@ -111,8 +111,16 @@ async function fredSeries(seriesId: string, name: string, unit: string): Promise
 	}
 }
 
+const BASE_HEADERS = {
+	'Content-Type': 'application/json',
+	'X-Content-Type-Options': 'nosniff',
+	'Access-Control-Allow-Origin': '*',
+	// Market indices cached 60s server-side; advise clients to revalidate after 1 min
+	'Cache-Control': 'public, max-age=60, stale-while-revalidate=30'
+};
+
 export const GET: RequestHandler = async () => {
-	const headers = { 'Access-Control-Allow-Origin': '*' };
+	const headers = BASE_HEADERS;
 
 	const [indices, crypto, fedFunds, treasury10y] = await Promise.all([
 		fetchIndices(),
@@ -139,6 +147,7 @@ export const OPTIONS: RequestHandler = async () =>
 		headers: {
 			'Access-Control-Allow-Origin': '*',
 			'Access-Control-Allow-Methods': 'GET, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type'
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'X-Content-Type-Options': 'nosniff'
 		}
 	});
