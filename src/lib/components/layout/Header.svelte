@@ -3,9 +3,10 @@
 
 	interface Props {
 		onSettingsClick?: () => void;
+		onKeywordsClick?: () => void;
 	}
 
-	let { onSettingsClick }: Props = $props();
+	let { onSettingsClick, onKeywordsClick }: Props = $props();
 
 	const lastRefreshText = $derived(
 		$lastRefresh
@@ -36,6 +37,10 @@
 		<button class="header-btn theme-btn" onclick={toggleTheme} title={themeLabel} aria-label={themeLabel}>
 			<span class="btn-icon">{themeIcon}</span>
 			<span class="btn-label">{themeLabel}</span>
+		</button>
+		<button class="header-btn" onclick={onKeywordsClick} title="Manage Keywords">
+			<span class="btn-icon">🔑</span>
+			<span class="btn-label">Keywords</span>
 		</button>
 		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
 			<span class="btn-icon">⚙</span>

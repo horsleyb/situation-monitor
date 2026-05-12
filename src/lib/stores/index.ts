@@ -71,6 +71,19 @@ export {
 // Theme store
 export { theme, toggleTheme, type Theme } from './theme';
 
+// Keywords store
+export {
+	customKeywords,
+	mergedAlertKeywords,
+	mergedRegionKeywords,
+	mergedTopicKeywords,
+	containsAlertKeywordMerged,
+	detectRegionMerged,
+	detectTopicsMerged,
+	type CustomKeywordsState,
+	type KeywordCategory
+} from './keywords';
+
 // Fed store
 export {
 	fedIndicators,
