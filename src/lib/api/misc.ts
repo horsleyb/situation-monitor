@@ -113,6 +113,29 @@ export async function fetchGovContracts(): Promise<Contract[]> {
 	];
 }
 
+export interface WeatherData {
+	location: string;
+	country: string;
+	temp_f: number;
+	temp_c: number;
+	feels_like_f: number;
+	feels_like_c: number;
+	humidity: number;
+	wind_mph: number;
+	wind_dir: string;
+	condition: string;
+	visibility_miles: number;
+	uv_index: number;
+	forecast: Array<{ date: string; high_f: number; low_f: number; condition: string; rain_chance: number }>;
+	timestamp: string;
+}
+
+export async function fetchWeather(location = 'Chicago'): Promise<WeatherData> {
+	const res = await fetch(`/api/weather?location=${encodeURIComponent(location)}`);
+	if (!res.ok) throw new Error(`Weather fetch failed: ${res.status}`);
+	return res.json() as Promise<WeatherData>;
+}
+
 /**
  * Fetch layoffs data
  * Note: Would use layoffs.fyi API or similar - returning sample data

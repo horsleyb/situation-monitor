@@ -21,7 +21,8 @@
 		SituationPanel,
 		WorldLeadersPanel,
 		PrinterPanel,
-		FedPanel
+		FedPanel,
+		WeatherPanel
 	} from '$lib/components/panels';
 	import {
 		news,
@@ -42,9 +43,10 @@
 		fetchLayoffs,
 		fetchWorldLeaders,
 		fetchFedIndicators,
-		fetchFedNews
+		fetchFedNews,
+		fetchWeather
 	} from '$lib/api';
-	import type { Prediction, WhaleTransaction, Contract, Layoff } from '$lib/api';
+	import type { Prediction, WhaleTransaction, Contract, Layoff, WeatherData } from '$lib/api';
 	import type { CustomMonitor, WorldLeader } from '$lib/types';
 	import type { PanelId } from '$lib/config';
 
@@ -61,6 +63,9 @@
 	let layoffs = $state<Layoff[]>([]);
 	let leaders = $state<WorldLeader[]>([]);
 	let leadersLoading = $state(false);
+	let weather = $state<WeatherData | null>(null);
+	let weatherLoading = $state(false);
+	let weatherError = $state<string | null>(null);
 
 	// Data fetching
 	async function loadNews() {
@@ -134,6 +139,19 @@
 		}
 	}
 
+	async function loadWeather() {
+		if (!isPanelVisible('weather')) return;
+		weatherLoading = true;
+		weatherError = null;
+		try {
+			weather = await fetchWeather('Chicago');
+		} catch (err) {
+			weatherError = String(err);
+		} finally {
+			weatherLoading = false;
+		}
+	}
+
 	// Refresh handlers
 	async function handleRefresh() {
 		refresh.startRefresh();
@@ -200,7 +218,8 @@
 					loadMarkets(),
 					loadMiscData(),
 					loadWorldLeaders(),
-					loadFedData()
+					loadFedData(),
+					loadWeather()
 				]);
 				refresh.endRefresh();
 			} catch (error) {
@@ -319,6 +338,13 @@
 			{#if isPanelVisible('fed')}
 				<div class="panel-slot">
 					<FedPanel />
+				</div>
+			{/if}
+
+			<!-- Weather Panel -->
+			{#if isPanelVisible('weather')}
+				<div class="panel-slot">
+					<WeatherPanel {weather} loading={weatherLoading} error={weatherError} />
 				</div>
 			{/if}
 

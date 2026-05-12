@@ -18,7 +18,7 @@ function setCached(key: string, data: unknown): void {
 	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-const WEATHER_CODES: Record<number, string> = {
+const _WEATHER_CODES: Record<number, string> = {
 	113: 'Sunny', 116: 'Partly cloudy', 119: 'Cloudy', 122: 'Overcast',
 	143: 'Mist', 176: 'Patchy rain', 179: 'Patchy snow', 182: 'Patchy sleet',
 	185: 'Patchy freezing drizzle', 200: 'Thundery outbreaks', 227: 'Blowing snow',
@@ -108,7 +108,7 @@ export const GET: RequestHandler = async ({ url }) => {
 			humidity: parseInt(String(cc.humidity || 0)),
 			wind_mph: parseInt(String(cc.windspeedMiles || 0)),
 			wind_dir: cc.winddir16Point as string || '',
-			condition: (cc.weatherDesc as {value:string}[])?.[0]?.value || '',
+			condition: (cc.weatherDesc as {value:string}[])?.[0]?.value || _WEATHER_CODES[parseInt(String(cc.weatherCode || 0))] || '',
 			visibility_miles: parseInt(String(cc.visibility || 0)),
 			uv_index: parseInt(String(cc.uvIndex || 0)),
 			forecast,
