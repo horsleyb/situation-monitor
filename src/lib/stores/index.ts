@@ -68,6 +68,19 @@ export {
 	type RefreshState
 } from './refresh';
 
+// Keywords store
+export {
+	customKeywords,
+	mergedAlertKeywords,
+	mergedRegionKeywords,
+	mergedTopicKeywords,
+	containsAlertKeywordMerged,
+	detectRegionMerged,
+	detectTopicsMerged,
+	type CustomKeywordsState,
+	type KeywordCategory
+} from './keywords';
+
 // Fed store
 export {
 	fedIndicators,

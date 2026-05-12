@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { onMount } from 'svelte';
 	import { Header, Dashboard } from '$lib/components/layout';
-	import { SettingsModal, MonitorFormModal, OnboardingModal } from '$lib/components/modals';
+	import { SettingsModal, MonitorFormModal, OnboardingModal, KeywordModal } from '$lib/components/modals';
 	import {
 		NewsPanel,
 		MarketsPanel,
@@ -50,6 +50,7 @@
 
 	// Modal state
 	let settingsOpen = $state(false);
+	let keywordsOpen = $state(false);
 	let monitorFormOpen = $state(false);
 	let onboardingOpen = $state(false);
 	let editingMonitor = $state<CustomMonitor | null>(null);
@@ -222,7 +223,7 @@
 </svelte:head>
 
 <div class="app">
-	<Header onSettingsClick={() => (settingsOpen = true)} />
+	<Header onSettingsClick={() => (settingsOpen = true)} onKeywordsClick={() => (keywordsOpen = true)} />
 
 	<main class="main-content">
 		<Dashboard>
@@ -445,6 +446,7 @@
 	</main>
 
 	<!-- Modals -->
+	<KeywordModal open={keywordsOpen} onClose={() => (keywordsOpen = false)} />
 	<SettingsModal
 		open={settingsOpen}
 		onClose={() => (settingsOpen = false)}

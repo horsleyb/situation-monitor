@@ -4,7 +4,11 @@
 
 import { writable, derived, get } from 'svelte/store';
 import type { NewsItem, NewsCategory } from '$lib/types';
-import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config';
+import {
+	containsAlertKeywordMerged as containsAlertKeyword,
+	detectRegionMerged as detectRegion,
+	detectTopicsMerged as detectTopics
+} from '$lib/stores/keywords';
 
 export interface CategoryState {
 	items: NewsItem[];
