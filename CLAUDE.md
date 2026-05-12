@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Repository
+
+**GitHub**: `https://github.com/horsleyb/situation-monitor`
+**Deployment**: Docker (adapter-node) — NOT a static site. API routes require a Node.js server.
+
 ## Development Workflow
 
 When working on a new feature:
@@ -24,25 +29,47 @@ npm run lint         # ESLint + Prettier check
 npm run format       # Auto-format with Prettier
 ```
 
+## Docker (Primary Deployment Method)
+
+```bash
+docker-compose up -d         # Start production container
+docker-compose down          # Stop
+docker-compose logs -f       # Follow logs
+docker-compose build         # Rebuild image
+```
+
+The app runs on **port 3004** in Docker (mapped to internal 3000). See `docker-compose.yml` and `Dockerfile`.
+
+Environment variables go in `.env` (copy from `.env.example`):
+- `VITE_FINNHUB_API_KEY` — optional, free tier 60 calls/min
+- `NODE_ENV=production`
+
 ## Technology Stack
 
 - **SvelteKit 2.0** with Svelte 5 reactivity (`$state`, `$derived`, `$effect` runes)
 - **TypeScript** (strict mode enabled)
 - **Tailwind CSS** with custom dark theme
+- **adapter-node** — server-side rendering + API routes (replaced static adapter)
 - **Vitest** (unit) + **Playwright** (E2E) for testing
-- **Static adapter** - deploys as pure static site to GitHub Pages
+- **Docker** — production deployment via docker-compose
 
 ## Project Architecture
 
 ### Core Directories (`src/lib/`)
 
 - **`analysis/`** - Pattern correlation, narrative tracking, main character detection across news items
-- **`api/`** - Data fetching from GDELT, RSS feeds (30+ sources), market APIs, CoinGecko
+- **`api/`** - Data fetching from RSS feeds (30+ sources), market APIs, CoinGecko, wttr.in weather
 - **`components/`** - Svelte components organized into layout/, panels/, modals/, common/
 - **`config/`** - Centralized configuration for feeds, keywords, analysis patterns, panels, map hotspots
 - **`services/`** - Resilience layer: CacheManager, CircuitBreaker, RequestDeduplicator, ServiceClient
 - **`stores/`** - Svelte stores for settings, news, markets, monitors, refresh orchestration
 - **`types/`** - TypeScript interfaces
+
+### Server-Side API Routes (`src/routes/api/`)
+
+SvelteKit API routes that run server-side (requires adapter-node / Docker):
+- `/api/weather` — weather data via wttr.in (no API key needed)
+- Additional routes added for Jarvis AI integration
 
 ### Path Aliases
 
@@ -88,12 +115,10 @@ Unique business logic for intelligence analysis:
 **Unit tests**: Located alongside source as `*.test.ts` or `*.spec.ts`
 **E2E tests**: In `tests/e2e/*.spec.ts`, run against preview server
 
-## Deployment
-
-GitHub Actions workflow builds with `BASE_PATH=/situation-monitor` and deploys to GitHub Pages at `https://hipcityreg.github.io/situation-monitor/`
-
 ## External Dependencies
 
 - **D3.js** for interactive map visualization
 - **CORS proxy** (Cloudflare Worker) for RSS feed parsing
 - **CoinGecko API** for cryptocurrency data
+- **wttr.in** for weather data (no key required)
+- **Finnhub** for market data (optional free API key)
