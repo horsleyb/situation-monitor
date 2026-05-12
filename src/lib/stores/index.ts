@@ -68,6 +68,9 @@ export {
 	type RefreshState
 } from './refresh';
 
+// Theme store
+export { theme, toggleTheme, type Theme } from './theme';
+
 // Fed store
 export {
 	fedIndicators,

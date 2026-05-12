@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { isRefreshing, lastRefresh } from '$lib/stores';
+	import { isRefreshing, lastRefresh, theme, toggleTheme } from '$lib/stores';
 
 	interface Props {
 		onSettingsClick?: () => void;
@@ -12,6 +12,9 @@
 			? `Last updated: ${new Date($lastRefresh).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`
 			: 'Never refreshed'
 	);
+
+	const themeLabel = $derived($theme === 'dark' ? 'Light mode' : 'Dark mode');
+	const themeIcon = $derived($theme === 'dark' ? '☀' : '☽');
 </script>
 
 <header class="header">
@@ -30,6 +33,10 @@
 	</div>
 
 	<div class="header-right">
+		<button class="header-btn theme-btn" onclick={toggleTheme} title={themeLabel} aria-label={themeLabel}>
+			<span class="btn-icon">{themeIcon}</span>
+			<span class="btn-label">{themeLabel}</span>
+		</button>
 		<button class="header-btn settings-btn" onclick={onSettingsClick} title="Settings">
 			<span class="btn-icon">⚙</span>
 			<span class="btn-label">Settings</span>
