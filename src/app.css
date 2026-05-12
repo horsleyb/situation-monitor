@@ -3,20 +3,51 @@
 @tailwind utilities;
 
 /* CSS Custom Properties for theming */
-:root {
+:root,
+html.dark {
 	--bg: #0a0a0a;
 	--surface: #141414;
 	--surface-hover: #1a1a1a;
 	--border: #2a2a2a;
 	--border-light: #3a3a3a;
 	--text: #e8e8e8;
+	--text-primary: #e8e8e8;
+	--text-secondary: #aaaaaa;
 	--text-dim: #888;
 	--text-muted: #666;
 	--accent: #fff;
+	--accent-rgb: 255, 255, 255;
 	--red: #ff4444;
 	--green: #44ff88;
 	--yellow: #ffaa00;
 	--blue: #4488ff;
+	--danger: #ff4444;
+	--success: #44ff88;
+	--warning: #ffaa00;
+	--info: #4488ff;
+}
+
+html.light {
+	--bg: #f0f2f5;
+	--surface: #ffffff;
+	--surface-hover: #f5f7fa;
+	--border: #d1d5db;
+	--border-light: #e5e7eb;
+	--text: #1a1a2e;
+	--text-primary: #1a1a2e;
+	--text-secondary: #4b5563;
+	--text-dim: #6b7280;
+	--text-muted: #9ca3af;
+	--accent: #1a1a2e;
+	--accent-rgb: 26, 26, 46;
+	--red: #dc2626;
+	--green: #16a34a;
+	--yellow: #d97706;
+	--blue: #2563eb;
+	--danger: #dc2626;
+	--success: #16a34a;
+	--warning: #d97706;
+	--info: #2563eb;
 }
 
 /* Base styles */

@@ -18,24 +18,6 @@ function setCached(key: string, data: unknown): void {
 	cache.set(key, { data, expires: Date.now() + CACHE_TTL });
 }
 
-const WEATHER_CODES: Record<number, string> = {
-	113: 'Sunny', 116: 'Partly cloudy', 119: 'Cloudy', 122: 'Overcast',
-	143: 'Mist', 176: 'Patchy rain', 179: 'Patchy snow', 182: 'Patchy sleet',
-	185: 'Patchy freezing drizzle', 200: 'Thundery outbreaks', 227: 'Blowing snow',
-	230: 'Blizzard', 248: 'Fog', 260: 'Freezing fog', 263: 'Light drizzle',
-	266: 'Drizzle', 281: 'Freezing drizzle', 284: 'Heavy freezing drizzle',
-	293: 'Light rain', 296: 'Light rain', 299: 'Moderate rain', 302: 'Moderate rain',
-	305: 'Heavy rain', 308: 'Heavy rain', 311: 'Light sleet', 314: 'Moderate sleet',
-	317: 'Light sleet', 320: 'Moderate snow', 323: 'Patchy light snow',
-	326: 'Light snow', 329: 'Patchy moderate snow', 332: 'Moderate snow',
-	335: 'Patchy heavy snow', 338: 'Heavy snow', 350: 'Ice pellets',
-	353: 'Light rain shower', 356: 'Moderate rain shower', 359: 'Torrential rain',
-	362: 'Light sleet shower', 365: 'Moderate sleet shower', 368: 'Light snow shower',
-	371: 'Moderate snow shower', 374: 'Light ice pellet shower',
-	377: 'Moderate ice pellet shower', 386: 'Patchy rain with thunder',
-	389: 'Moderate/heavy rain with thunder', 392: 'Patchy snow with thunder',
-	395: 'Moderate/heavy snow with thunder',
-};
 
 export interface WeatherData {
 	location: string;
