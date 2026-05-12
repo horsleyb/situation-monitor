@@ -32,30 +32,36 @@ export interface Layoff {
 }
 
 /**
- * Fetch Polymarket predictions
- * Note: Polymarket API requires authentication - returns curated prediction data
+ * Format a raw dollar volume number as a human-readable string.
+ * e.g. 8100000 → "$8.1M", 450000 → "$450K"
+ */
+export function formatVolume(n: number): string {
+	if (!n || n <= 0) return '$0';
+	if (n >= 1_000_000) return '$' + (n / 1_000_000).toFixed(1) + 'M';
+	if (n >= 1_000) return '$' + (n / 1_000).toFixed(0) + 'K';
+	return '$' + Math.round(n).toString();
+}
+
+/**
+ * Fetch Polymarket predictions via the server-side proxy (/api/polymarket).
+ * The proxy fetches from clob.polymarket.com and avoids CORS issues.
  */
 export async function fetchPolymarket(): Promise<Prediction[]> {
-	// These represent active prediction markets on major events
-	return [
-		{
-			id: 'pm-1',
-			question: 'Will there be a US-China military incident in 2026?',
-			yes: 18,
-			volume: '2.4M'
-		},
-		{ id: 'pm-2', question: 'Will Bitcoin reach $150K by end of 2026?', yes: 35, volume: '8.1M' },
-		{ id: 'pm-3', question: 'Will Fed cut rates in Q1 2026?', yes: 42, volume: '5.2M' },
-		{ id: 'pm-4', question: 'Will AI cause major job losses in 2026?', yes: 28, volume: '1.8M' },
-		{ id: 'pm-5', question: 'Will Ukraine conflict end in 2026?', yes: 22, volume: '3.5M' },
-		{ id: 'pm-6', question: 'Will oil prices exceed $100/barrel?', yes: 31, volume: '2.1M' },
-		{
-			id: 'pm-7',
-			question: 'Will there be a major cyberattack on US infrastructure?',
-			yes: 45,
-			volume: '1.5M'
+	try {
+		const res = await fetch('/api/polymarket');
+		if (!res.ok) {
+			console.error(`[fetchPolymarket] proxy returned ${res.status}`);
+			return [];
 		}
-	];
+		const body: { data: Prediction[]; error?: string } = await res.json();
+		if (body.error) {
+			console.warn('[fetchPolymarket] upstream error:', body.error);
+		}
+		return Array.isArray(body.data) ? body.data : [];
+	} catch (err) {
+		console.error('[fetchPolymarket] failed:', err);
+		return [];
+	}
 }
 
 /**
