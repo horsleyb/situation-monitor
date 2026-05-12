@@ -77,3 +77,13 @@ export {
 	type FedIndicatorsState,
 	type FedNewsState
 } from './fed';
+
+// Feed health store
+export {
+	feedHealthStore,
+	updateFeedHealth,
+	feedHealthList,
+	feedHealthSummary,
+	type FeedHealth,
+	type FeedHealthState
+} from './feedHealth';

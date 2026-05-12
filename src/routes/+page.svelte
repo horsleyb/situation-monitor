@@ -21,7 +21,8 @@
 		SituationPanel,
 		WorldLeadersPanel,
 		PrinterPanel,
-		FedPanel
+		FedPanel,
+		FeedHealthPanel
 	} from '$lib/components/panels';
 	import {
 		news,
@@ -31,7 +32,8 @@
 		refresh,
 		allNewsItems,
 		fedIndicators,
-		fedNews
+		fedNews,
+		feedHealthStore
 	} from '$lib/stores';
 	import {
 		fetchAllNews,
@@ -42,7 +44,8 @@
 		fetchLayoffs,
 		fetchWorldLeaders,
 		fetchFedIndicators,
-		fetchFedNews
+		fetchFedNews,
+		fetchFeedHealth
 	} from '$lib/api';
 	import type { Prediction, WhaleTransaction, Contract, Layoff } from '$lib/api';
 	import type { CustomMonitor, WorldLeader } from '$lib/types';
@@ -61,6 +64,8 @@
 	let layoffs = $state<Layoff[]>([]);
 	let leaders = $state<WorldLeader[]>([]);
 	let leadersLoading = $state(false);
+	let feedHealthLoading = $state(false);
+	let feedHealthError = $state<string | null>(null);
 
 	// Data fetching
 	async function loadNews() {
@@ -116,6 +121,22 @@
 			console.error('Failed to load world leaders:', error);
 		} finally {
 			leadersLoading = false;
+		}
+	}
+
+	async function loadFeedHealth() {
+		if (!isPanelVisible('feed-health')) return;
+		feedHealthLoading = true;
+		feedHealthError = null;
+		feedHealthStore.setLoading(true);
+		try {
+			const data = await fetchFeedHealth();
+			feedHealthStore.setFromApiResponse(data.feeds);
+		} catch (error) {
+			feedHealthError = String(error);
+			feedHealthStore.setError(String(error));
+		} finally {
+			feedHealthLoading = false;
 		}
 	}
 
@@ -200,7 +221,8 @@
 					loadMarkets(),
 					loadMiscData(),
 					loadWorldLeaders(),
-					loadFedData()
+					loadFedData(),
+					loadFeedHealth()
 				]);
 				refresh.endRefresh();
 			} catch (error) {
@@ -425,6 +447,13 @@
 			{#if isPanelVisible('printer')}
 				<div class="panel-slot">
 					<PrinterPanel />
+				</div>
+			{/if}
+
+			<!-- Feed Health Panel -->
+			{#if isPanelVisible('feed-health')}
+				<div class="panel-slot">
+					<FeedHealthPanel loading={feedHealthLoading} error={feedHealthError} />
 				</div>
 			{/if}
 
