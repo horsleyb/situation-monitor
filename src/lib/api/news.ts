@@ -6,6 +6,7 @@ import { FEEDS } from '$lib/config/feeds';
 import type { NewsItem, NewsCategory } from '$lib/types';
 import { containsAlertKeyword, detectRegion, detectTopics } from '$lib/config/keywords';
 import { fetchWithProxy, API_DELAYS, logger } from '$lib/config/api';
+import { configOverrides } from '$lib/stores/configOverrides';
 
 /**
  * Simple hash function to generate unique IDs from URLs
@@ -90,19 +91,9 @@ function transformGdeltArticle(
  * Fetch news for a specific category using GDELT via proxy
  */
 export async function fetchCategoryNews(category: NewsCategory): Promise<NewsItem[]> {
-	// Build query from category keywords (GDELT requires OR queries in parentheses)
-	const categoryQueries: Record<NewsCategory, string> = {
-		politics: '(politics OR government OR election OR congress)',
-		tech: '(technology OR software OR startup OR "silicon valley")',
-		finance: '(finance OR "stock market" OR economy OR banking)',
-		gov: '("federal government" OR "white house" OR congress OR regulation)',
-		ai: '("artificial intelligence" OR "machine learning" OR AI OR ChatGPT)',
-		intel: '(intelligence OR security OR military OR defense)'
-	};
-
 	try {
 		// Add English language filter and timespan for fresh results
-		const baseQuery = categoryQueries[category];
+		const baseQuery = configOverrides.getEffectiveGdeltQuery(category);
 		const fullQuery = `${baseQuery} sourcelang:english`;
 		// Build the raw GDELT URL with timespan=7d to get recent articles
 		const gdeltUrl = `https://api.gdeltproject.org/api/v2/doc/doc?query=${fullQuery}&timespan=7d&mode=artlist&maxrecords=20&format=json&sort=date`;

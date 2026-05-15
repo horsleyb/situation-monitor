@@ -3,6 +3,7 @@
  */
 
 import { browser } from '$app/environment';
+import { configOverrides } from '$lib/stores/configOverrides';
 
 /**
  * Finnhub API key
@@ -51,21 +52,21 @@ export const CORS_PROXY_URL = CORS_PROXIES.fallback;
  */
 export async function fetchWithProxy(url: string): Promise<Response> {
 	const encodedUrl = encodeURIComponent(url);
+	const proxies = configOverrides.getEffectiveCorsProxies();
 
 	// Try primary proxy first
 	try {
-		const response = await fetch(CORS_PROXIES.primary + encodedUrl);
+		const response = await fetch(proxies.primary + encodedUrl);
 		if (response.ok) {
 			return response;
 		}
-		// If we get an error response, try fallback
 		logger.warn('API', `Primary proxy failed (${response.status}), trying fallback`);
 	} catch (error) {
 		logger.warn('API', 'Primary proxy error, trying fallback:', error);
 	}
 
 	// Fallback to secondary proxy
-	return fetch(CORS_PROXIES.fallback + encodedUrl);
+	return fetch(proxies.fallback + encodedUrl);
 }
 
 /**

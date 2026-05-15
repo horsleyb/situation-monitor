@@ -106,3 +106,12 @@ export {
 
 // DGX LLM settings
 export { dgxEnabled } from './dgx';
+
+// Config overrides (feeds, GDELT queries, proxy)
+export {
+	configOverrides,
+	DEFAULT_GDELT_QUERIES,
+	DEFAULT_CORS_PROXIES,
+	NEWS_CATEGORIES,
+	type ConfigOverridesState
+} from './configOverrides';
