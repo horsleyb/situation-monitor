@@ -23,7 +23,8 @@
 		PrinterPanel,
 		FedPanel,
 		WeatherPanel,
-		FeedHealthPanel
+		FeedHealthPanel,
+		DigestPanel
 	} from '$lib/components/panels';
 	import {
 		news,
@@ -328,6 +329,13 @@
 			{#if isPanelVisible('crypto')}
 				<div class="panel-slot">
 					<CryptoPanel />
+				</div>
+			{/if}
+
+			<!-- Digest Panel -->
+			{#if isPanelVisible('digest')}
+				<div class="panel-slot">
+					<DigestPanel />
 				</div>
 			{/if}
 

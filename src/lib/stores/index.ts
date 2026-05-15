@@ -107,6 +107,14 @@ export {
 // DGX LLM settings
 export { dgxEnabled } from './dgx';
 
+// Daily digest store
+export {
+	digest,
+	type DigestData,
+	type DigestState,
+	type DigestPayload
+} from './digest';
+
 // Config overrides (feeds, GDELT queries, proxy)
 export {
 	configOverrides,

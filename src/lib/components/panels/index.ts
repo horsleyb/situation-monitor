@@ -20,3 +20,4 @@ export { default as WorldLeadersPanel } from './WorldLeadersPanel.svelte';
 export { default as FedPanel } from './FedPanel.svelte';
 export { default as WeatherPanel } from './WeatherPanel.svelte';
 export { default as FeedHealthPanel } from './FeedHealthPanel.svelte';
+export { default as DigestPanel } from './DigestPanel.svelte';
