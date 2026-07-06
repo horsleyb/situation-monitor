@@ -34,6 +34,13 @@
 	</div>
 
 	<div class="header-right">
+		<div class="ecosystem">
+			<span class="eco-label">Ecosystem</span>
+			<a href="http://taskmaster.home" target="_blank" rel="noopener noreferrer" class="eco-link eco-purple">Taskmaster ↗</a>
+			<a href="http://synapse.home" target="_blank" rel="noopener noreferrer" class="eco-link eco-blue">Synapse ↗</a>
+			<a href="http://ai-corp.home" target="_blank" rel="noopener noreferrer" class="eco-link eco-green">AI-Corp ↗</a>
+		</div>
+		<div class="eco-sep"></div>
 		<button class="header-btn theme-btn" onclick={toggleTheme} title={themeLabel} aria-label={themeLabel}>
 			<span class="btn-icon">{themeIcon}</span>
 			<span class="btn-label">{themeLabel}</span>
@@ -149,6 +156,54 @@
 	@media (min-width: 768px) {
 		.btn-label {
 			display: inline;
+		}
+	}
+
+	.ecosystem {
+		display: none;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	@media (min-width: 900px) {
+		.ecosystem {
+			display: flex;
+		}
+	}
+
+	.eco-label {
+		font-size: 0.55rem;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
+		color: var(--text-muted);
+	}
+
+	.eco-link {
+		font-size: 0.6rem;
+		text-decoration: none;
+		transition: opacity 0.15s;
+		opacity: 0.75;
+	}
+
+	.eco-link:hover {
+		opacity: 1;
+	}
+
+	.eco-purple { color: #c084fc; }
+	.eco-blue   { color: #60a5fa; }
+	.eco-green  { color: #34d399; }
+
+	.eco-sep {
+		width: 1px;
+		height: 1.25rem;
+		background: var(--border);
+		display: none;
+	}
+
+	@media (min-width: 900px) {
+		.eco-sep {
+			display: block;
 		}
 	}
 </style>
