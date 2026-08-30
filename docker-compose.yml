@@ -16,6 +16,7 @@ services:
       - NODE_ENV=production
       - VITE_FINNHUB_API_KEY=${VITE_FINNHUB_API_KEY:-}
       - VITE_FRED_API_KEY=${VITE_FRED_API_KEY:-}
+      - MARKETSTACK_API_KEY=${MARKETSTACK_API_KEY:-}
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
       interval: 30s
