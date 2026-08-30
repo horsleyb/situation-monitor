@@ -8,6 +8,7 @@ import type { RequestHandler } from './$types';
 
 const FINNHUB_KEY = process.env.VITE_FINNHUB_API_KEY ?? '';
 const FRED_KEY = process.env.VITE_FRED_API_KEY ?? '';
+const MARKETSTACK_KEY = process.env.MARKETSTACK_API_KEY ?? '';
 
 interface CacheEntry { data: unknown; expires: number }
 const cache = new Map<string, CacheEntry>();
@@ -43,9 +44,64 @@ async function finnhubQuote(symbol: string): Promise<{ c: number; d: number; dp:
 	}
 }
 
+interface MarketstackEodBar {
+	symbol: string;
+	close: number;
+	date: string;
+}
+
+/**
+ * Marketstack fallback for indices when Finnhub isn't configured. Free tier
+ * is 100 requests/month and end-of-day-only (no intraday) -- the opposite
+ * shape of Finnhub's 60/min live quotes -- so this is cached for 24h (one
+ * batched request covering all 4 indices' last 2 EOD bars = ~30 req/month,
+ * well under quota) rather than the 60s TTL Finnhub uses. Data reflects the
+ * most recent close, not live intraday movement.
+ */
+async function marketstackIndices(): Promise<Quote[]> {
+	const cached = getCached('markets:indices:marketstack');
+	if (cached) return cached as Quote[];
+
+	const emptyResults = () =>
+		INDEX_MAP.map(({ symbol, label }) => ({ symbol, label, price: NaN, change: NaN, changePercent: NaN }));
+
+	if (!MARKETSTACK_KEY) return emptyResults();
+
+	try {
+		const etfs = INDEX_MAP.map((i) => i.etf).join(',');
+		const url = `https://api.marketstack.com/v1/eod?access_key=${MARKETSTACK_KEY}&symbols=${etfs}&limit=${INDEX_MAP.length * 2}`;
+		const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+		if (!res.ok) return emptyResults();
+		const body = await res.json();
+		const bars: MarketstackEodBar[] = Array.isArray(body?.data) ? body.data : [];
+
+		const results = INDEX_MAP.map(({ symbol, etf, label }) => {
+			// Two most recent bars for this symbol, newest first (Marketstack
+			// returns results newest-first within a symbol by default).
+			const symbolBars = bars.filter((b) => b.symbol === etf).slice(0, 2);
+			const [latest, previous] = symbolBars;
+			if (!latest) return { symbol, label, price: NaN, change: NaN, changePercent: NaN };
+			const change = previous ? latest.close - previous.close : NaN;
+			const changePercent = previous && previous.close !== 0 ? (change / previous.close) * 100 : NaN;
+			return { symbol, label, price: latest.close, change, changePercent };
+		});
+
+		setCached('markets:indices:marketstack', results, 24 * 60 * 60_000);
+		return results;
+	} catch {
+		return emptyResults();
+	}
+}
+
 async function fetchIndices(): Promise<Quote[]> {
 	const cached = getCached('markets:indices');
 	if (cached) return cached as Quote[];
+
+	if (!FINNHUB_KEY) {
+		// No live-quote key configured -- fall back to Marketstack's EOD data
+		// (own 24h cache above) rather than returning empty indices.
+		return marketstackIndices();
+	}
 
 	const results = await Promise.all(
 		INDEX_MAP.map(async ({ symbol, etf, label }) => {
@@ -136,7 +192,8 @@ export const GET: RequestHandler = async () => {
 			crypto,
 			economy: { fedFundsRate: fedFunds, treasury10Y: treasury10y },
 			hasFinnhub: Boolean(FINNHUB_KEY),
-			hasFred: Boolean(FRED_KEY)
+			hasFred: Boolean(FRED_KEY),
+			hasMarketstack: Boolean(MARKETSTACK_KEY)
 		},
 		{ headers }
 	);
